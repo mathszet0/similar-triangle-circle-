@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>相似三角形幾何視覺化動畫</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        body {
+            background-color: #ffffff;
+            color: #2c3e50;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            font-size: 22px;
+            margin-bottom: 6px;
+            color: #1a252f;
+        }
+        p.subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 16px;
+        }
+        .tab-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            max-width: 860px;
+            width: 100%;
+            justify-content: center;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 10px 15px;
+            border: 2px solid #3498db;
+            background-color: #ffffff;
+            color: #3498db;
+            font-size: 15px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        .tab-btn:hover {
+            background-color: #ebf5fb;
+        }
+        .tab-btn.active {
+            background-color: #3498db;
+            color: #ffffff;
+        }
+        .container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+            padding: 20px;
+            max-width: 860px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            background-color: #ffffff;
+            border: 1px solid #edf2f7;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .controls {
+            width: 100%;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .slider-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .slider-box label {
+            font-weight: bold;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        input[type=range] {
+            flex: 1;
+            height: 6px;
+            border-radius: 3px;
+            accent-color: #3498db;
+            cursor: pointer;
+        }
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button.action-btn {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 6px;
+            background-color: #3498db;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        button.action-btn:hover {
+            background-color: #2980b9;
+        }
+        button.action-btn.secondary {
+            background-color: #ecf0f1;
+            color: #34495e;
+        }
+        button.action-btn.secondary:hover {
+            background-color: #bdc3c7;
+        }
+        .info-card {
+            width: 100%;
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #f8fafc;
+            border-left: 4px solid #3498db;
+            border-radius: 4px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .legend {
+            display: flex;
+            gap: 18px;
+            margin-top: 10px;
+            font-size: 13px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .legend-color {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>相似三角形幾何視覺化動畫</h1>
+    <p class="subtitle">選取題目 Tab ➔ 拉動進度條觀看三角形翻轉 (Flip) 與角度動態對齊過程</p>
+
+    <div class="tab-group">
+        <button class="tab-btn active" id="tab30" onclick="switchTab(30)">第 30 題 (△AOD ~ △CED)</button>
+        <button class="tab-btn" id="tab31" onclick="switchTab(31)">第 31 題 (△ABE ~ △DCE)</button>
+        <button class="tab-btn" id="tab32" onclick="switchTab(32)">第 32 題 (△ABT ~ △CAT)</button>
+    </div>
+
+    <div class="container">
+        <canvas id="canvas" width="800" height="420"></canvas>
+
+        <div class="legend" id="legendBox"></div>
+
+        <div class="controls">
+            <div class="slider-box">
+                <label for="progress">變換進度：</label>
+                <input type="range" id="progress" min="0" max="1" step="0.002" value="0">
+                <span id="percentText" style="min-width: 45px; text-align: right; font-weight: bold;">0%</span>
+            </div>
+
+            <div class="btn-group">
+                <button class="action-btn" id="btnPlay">▶ 自動播放</button>
+                <button class="action-btn secondary" onclick="setProgress(0)">1. 原始圖形</button>
+                <button class="action-btn secondary" onclick="setProgress(0.1)">2. 固定釘子</button>
+                <button class="action-btn secondary" onclick="setProgress(0.45)">3. 翻轉對齊</button>
+                <button class="action-btn secondary" onclick="setProgress(1.0)">4. 放大重疊</button>
+            </div>
+        </div>
+
+        <div class="info-card" id="infoBox">
+            載入中...
+        </div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const slider = document.getElementById('progress');
+    const percentText = document.getElementById('percentText');
+    const infoBox = document.getElementById('infoBox');
+    const legendBox = document.getElementById('legendBox');
+    const btnPlay = document.getElementById('btnPlay');
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = 800 * dpr;
+    canvas.height = 420 * dpr;
+    canvas.style.width = '800px';
+    canvas.style.height = '420px';
+    ctx.scale(dpr, dpr);
+
+    let currentTab = 30;
+    let isPlaying = false;
+
+    function switchTab(tabNum) {
+        currentTab = tabNum;
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById('tab' + tabNum).classList.add('active');
+        
+        isPlaying = false;
+        btnPlay.innerText = '▶ 自動播放';
+        slider.value = 0;
+        
+        updateLegend();
+        draw();
+    }
+
+    function setProgress(val) {
+        isPlaying = false;
+        btnPlay.innerText = '▶ 自動播放';
+        slider.value = val;
+        draw();
+    }
+
+    function updateLegend() {
+        if (currentTab === 30) {
+            legendBox.innerHTML = `
+                <div class="legend-item"><div class="legend-color" style="background: rgba(41, 128, 185, 0.4); border: 1.5px solid #2980b9;"></div><span>移動 △AOD</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: rgba(230, 126, 34, 0.2); border: 1.5px dashed #e67e22;"></div><span>目標 △CED</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div><span>固定點 (D)</span></div>
+            `;
+        } else if (currentTab === 31) {
+            legendBox.innerHTML = `
+                <div class="legend-item"><div class="legend-color" style="background: rgba(230, 126, 34, 0.4); border: 1.5px solid #e67e22;"></div><span>∠B = ∠C (同弓形角 •)</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: rgba(39, 174, 96, 0.4); border: 1.5px solid #27ae60;"></div><span>∠A = ∠D (同弓形角 x)</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: rgba(41, 128, 185, 0.4); border: 1.5px solid #2980b9;"></div><span>移動 △DCE ➔ 目標 △ABE</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div><span>固定點 (E)</span></div>
+            `;
+        } else if (currentTab === 32) {
+            legendBox.innerHTML = `
+                <div class="legend-item"><div class="legend-color" style="background: rgba(232, 67, 147, 0.4); border: 1.5px solid #e84393;"></div><span>∠CAT = ∠ABC (交錯弓形角 •)</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: rgba(41, 128, 185, 0.4); border: 1.5px solid #2980b9;"></div><span>移動 △CAT ➔ 目標 △ABT</span></div>
+                <div class="legend-item"><div class="legend-color" style="background: #e74c3c;"></div><span>固定點 (T)</span></div>
+            `;
+        }
+    }
+
+    function drawLine(p1, p2, color, width, dash = []) {
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.setLineDash(dash);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function drawPointLabel(text, p, offsetX, offsetY, color = '#2c3e50', isBold = false) {
+        ctx.fillStyle = color;
+        ctx.font = isBold ? 'bold 15px sans-serif' : '14px sans-serif';
+        ctx.fillText(text, p.x + offsetX, p.y + offsetY);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+    }
+
+    // 通用角扇形繪製函數（動態適應任意移動頂點）
+    function drawAngleSector(V, P1, P2, radius, fillColor, strokeColor, label = '') {
+        const a1 = Math.atan2(P1.y - V.y, P1.x - V.x);
+        const a2 = Math.atan2(P2.y - V.y, P2.x - V.x);
+        let diff = a2 - a1;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+
+        ctx.beginPath();
+        ctx.moveTo(V.x, V.y);
+        ctx.arc(V.x, V.y, radius, a1, a1 + diff, diff < 0);
+        ctx.closePath();
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 1.8;
+        ctx.stroke();
+
+        if (label) {
+            const mid = a1 + diff / 2;
+            const lx = V.x + (radius + 12) * Math.cos(mid);
+            const ly = V.y + (radius + 12) * Math.sin(mid);
+            ctx.fillStyle = strokeColor;
+            ctx.font = 'bold 12px sans-serif';
+            ctx.fillText(label, lx - 4, ly + 4);
+        }
+    }
+
+    function drawRightAngle(V, P1, P2, size, color, width = 1.5) {
+        const len1 = Math.hypot(P1.x - V.x, P1.y - V.y);
+        const len2 = Math.hypot(P2.x - V.x, P2.y - V.y);
+        if (len1 === 0 || len2 === 0) return;
+        const u = { x: (P1.x - V.x) / len1, y: (P1.y - V.y) / len1 };
+        const v = { x: (P2.x - V.x) / len2, y: (P2.y - V.y) / len2 };
+
+        ctx.beginPath();
+        ctx.moveTo(V.x + u.x * size, V.y + u.y * size);
+        ctx.lineTo(V.x + (u.x + v.x) * size, V.y + (u.y + v.y) * size);
+        ctx.lineTo(V.x + v.x * size, V.y + v.y * size);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.stroke();
+    }
+
+    function transformPointGeneric(P, Pin, AxisP1, TargetP1, scaleFactor, t) {
+        let vx = P.x - Pin.x;
+        let vy = P.y - Pin.y;
+
+        let t1 = Math.min(1, Math.max(0, t / 0.5));
+        let t2 = Math.min(1, Math.max(0, (t - 0.5) / 0.5));
+
+        let v1 = { x: AxisP1.x - Pin.x, y: AxisP1.y - Pin.y };
+        let len1 = Math.hypot(v1.x, v1.y);
+        let u1 = { x: v1.x / len1, y: v1.y / len1 };
+
+        let v2 = { x: TargetP1.x - Pin.x, y: TargetP1.y - Pin.y };
+        let len2 = Math.hypot(v2.x, v2.y);
+        let u2 = { x: v2.x / len2, y: v2.y / len2 };
+
+        let bisector = { x: u1.x + u2.x, y: u1.y + u2.y };
+        let bLen = Math.hypot(bisector.x, bisector.y);
+        let ux = bisector.x / bLen;
+        let uy = bisector.y / bLen;
+
+        let dot = vx * ux + vy * uy;
+        let v_par_x = dot * ux;
+        let v_par_y = dot * uy;
+        let v_perp_x = vx - v_par_x;
+        let v_perp_y = vy - v_par_y;
+
+        let beta = t1 * Math.PI;
+
+        let rx = v_par_x + v_perp_x * Math.cos(beta);
+        let ry = v_par_y + v_perp_y * Math.cos(beta);
+        let rz = (ux * vy - uy * vx) * Math.sin(beta);
+
+        let currentScale = 1 + t2 * (scaleFactor - 1);
+
+        return {
+            x: Pin.x + (rx + rz * 0.12) * currentScale,
+            y: Pin.y + (ry - rz * 0.12) * currentScale
+        };
+    }
+
+    // ==========================================
+    // QUESTION 30
+    // ==========================================
+    function drawQ30(t) {
+        const D = { x: 130, y: 320 };
+        const R = 65;
+        const OD = 210;
+        const O = { x: D.x + OD, y: D.y };
+        const B = { x: O.x - R, y: D.y };
+        const C = { x: O.x + R, y: D.y };
+        const DC = C.x - D.x;
+
+        const sinTheta = R / OD;
+        const theta = Math.asin(sinTheta);
+        const cosTheta = Math.cos(theta);
+
+        const DA = Math.sqrt(OD * OD - R * R);
+        const A = { x: D.x + DA * cosTheta, y: D.y - DA * sinTheta };
+        const tanTheta = Math.tan(theta);
+        const EC = DC * tanTheta;
+        const E = { x: C.x, y: C.y - EC };
+        const kScale = DC / DA;
+
+        ctx.beginPath();
+        ctx.arc(O.x, O.y, R, 0, Math.PI * 2);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        drawLine(D, {x: C.x + 30, y: C.y}, '#94a3b8', 1.5);
+        drawLine(D, {x: E.x + 15, y: E.y - 10}, '#94a3b8', 1.5);
+        drawLine(E, C, '#94a3b8', 1.5);
+        drawRightAngle(C, D, E, 12, '#94a3b8');
+
+        ctx.beginPath();
+        ctx.moveTo(D.x, D.y); ctx.lineTo(C.x, C.y); ctx.lineTo(E.x, E.y); ctx.closePath();
+        ctx.fillStyle = 'rgba(230, 126, 34, 0.08)'; ctx.fill();
+        ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]);
+        drawLine(C, E, '#e67e22', 3.5);
+
+        const A_trans = transformPointGeneric(A, D, A, C, kScale, t);
+        const O_trans = transformPointGeneric(O, D, A, C, kScale, t);
+
+        const activeColor = (t >= 0.99) ? '#27ae60' : '#2980b9';
+
+        ctx.beginPath();
+        ctx.moveTo(D.x, D.y); ctx.lineTo(A_trans.x, A_trans.y); ctx.lineTo(O_trans.x, O_trans.y); ctx.closePath();
+        ctx.fillStyle = (t >= 0.99) ? 'rgba(46, 204, 113, 0.35)' : 'rgba(41, 128, 185, 0.25)';
+        ctx.strokeStyle = activeColor; ctx.lineWidth = 2.5; ctx.fill(); ctx.stroke();
+
+        drawRightAngle(A_trans, D, O_trans, 11 * (1 + t * 0.414), activeColor, 1.8);
+        drawLine(A_trans, O_trans, activeColor, 4);
+
+        ctx.beginPath(); ctx.arc(D.x, D.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#e74c3c'; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+
+        drawPointLabel('D', D, -18, 5, '#e74c3c', true);
+        drawPointLabel('B', B, -5, 20, '#64748b');
+        drawPointLabel('C', C, -5, 20, '#e67e22', true);
+        drawPointLabel('E', E, 10, -5, '#e67e22', true);
+        drawPointLabel('O', O, 0, 20, '#334155');
+        drawPointLabel('A', A, -10, -12, '#2980b9');
+
+        if (t > 0.05 && t < 0.95) {
+            drawPointLabel("A'", A_trans, -12, -12, '#2980b9');
+            drawPointLabel("O'", O_trans, 10, 15, '#2980b9');
+        }
+
+        if (t === 0) {
+            infoBox.innerHTML = `<strong>第 30 題：已知條件</strong><br>
+            • $\\triangle AOD$ 與 $\\triangle CED$ 共享 $\\angle D$。<br>
+            • 切線性質：<b>$\\angle OAD = 90^\\circ$</b>（圓心連線垂直切線）且 <b>$\\angle ECD = 90^\\circ$</b>。<br>
+            • 結論：<b>$\\triangle AOD \\sim \\triangle CED$ (AA 相似)</b>。`;
+        } else if (t < 0.5) {
+            infoBox.innerHTML = `<strong>第 30 題：釘實 D 點 ➔ 沿角平分線翻轉 (Flip)</strong><br>
+            • 將 $\\triangle AOD$ 抆出來進行對稱翻轉，使直角 $\\angle OAD$ 轉向對齊 $\\angle ECD$。`;
+        } else if (t < 0.99) {
+            infoBox.innerHTML = `<strong>第 30 題：按比例「放大 (Scale)」</strong><br>
+            • 以 $D$ 為中心放大（比例 $\\frac{DC}{DA}$），邊 $AO$ 漸漸貼近邊 $CE$。`;
+        } else {
+            infoBox.innerHTML = `<strong>第 30 題：完美重疊（證畢）</strong><br>
+            • <b style="color:#27ae60;">邊 AO 完美貼落邊 CE 上！</b> 證實兩三角形相似。`;
+        }
+    }
+
+
+    // ==========================================
+    // QUESTION 31 (動態對應角跟隨翻轉放大)
+    // ==========================================
+    function drawQ31(t) {
+        const E = { x: 440, y: 195 };
+
+        const theta1 = 1.18;
+        const u1 = { x: Math.cos(theta1), y: Math.sin(theta1) };
+        const lenEA = 130;
+        const lenEC = 97.5;
+        const A = { x: E.x - lenEA * u1.x, y: E.y - lenEA * u1.y };
+        const C = { x: E.x + lenEC * u1.x, y: E.y + lenEC * u1.y };
+
+        const theta2 = -0.36;
+        const u2 = { x: Math.cos(theta2), y: Math.sin(theta2) };
+        const lenED = 65;
+        const lenEB = 195;
+        const D = { x: E.x + lenED * u2.x, y: E.y + lenED * u2.y };
+        const B = { x: E.x - lenEB * u2.x, y: E.y - lenEB * u2.y };
+
+        const kScale = lenEA / lenED; // 放大倍數 = 2.0
+
+        // 外接圓
+        const D_val = 2 * (A.x * (B.y - C.y) + B.x * (C.y - A.y) + C.x * (A.y - B.y));
+        const Ox = ((A.x * A.x + A.y * A.y) * (B.y - C.y) + (B.x * B.x + B.y * B.y) * (C.y - A.y) + (C.x * C.x + C.y * C.y) * (A.y - B.y)) / D_val;
+        const Oy = ((A.x * A.x + A.y * A.y) * (C.x - B.x) + (B.x * B.x + B.y * B.y) * (A.x - C.x) + (C.x * C.x + C.y * C.y) * (B.x - A.x)) / D_val;
+        const R = Math.hypot(A.x - Ox, A.y - Oy);
+
+        ctx.beginPath(); ctx.arc(Ox, Oy, R, 0, Math.PI * 2);
+        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.5; ctx.stroke();
+
+        drawLine(A, C, '#cbd5e1', 1.5);
+        drawLine(B, D, '#cbd5e1', 1.5);
+        drawLine(A, B, '#2980b9', 2.5);
+        drawLine(D, C, '#94a3b8', 1.5);
+
+        // 1. 左側目標三角形 △ABE 上的靜態角度標記
+        drawAngleSector(B, A, E, 24, 'rgba(230, 126, 34, 0.35)', '#e67e22', '•'); // ∠ABE (角B)
+        drawAngleSector(A, B, E, 24, 'rgba(39, 174, 96, 0.35)', '#27ae60', 'x');  // ∠BAE (角A)
+
+        // 目標 △ABE (虛線輪廓)
+        ctx.beginPath();
+        ctx.moveTo(E.x, E.y); ctx.lineTo(A.x, A.y); ctx.lineTo(B.x, B.y); ctx.closePath();
+        ctx.fillStyle = 'rgba(41, 128, 185, 0.08)'; ctx.fill();
+        ctx.strokeStyle = '#3498db'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+        // 2. 計算動態移動點
+        const D_trans = transformPointGeneric(D, E, D, A, kScale, t);
+        const C_trans = transformPointGeneric(C, E, D, A, kScale, t);
+
+        const activeColor = (t >= 0.99) ? '#27ae60' : '#2980b9';
+
+        // 畫移動中的 △DCE
+        ctx.beginPath();
+        ctx.moveTo(E.x, E.y); ctx.lineTo(D_trans.x, D_trans.y); ctx.lineTo(C_trans.x, C_trans.y); ctx.closePath();
+        ctx.fillStyle = (t >= 0.99) ? 'rgba(46, 204, 113, 0.35)' : 'rgba(41, 128, 185, 0.25)';
+        ctx.strokeStyle = activeColor; ctx.lineWidth = 2.5; ctx.fill(); ctx.stroke();
+
+        // 3. 【關鍵：動態角的動態繪製】跟隨 C_trans 和 D_trans 翻轉與放大
+        const rDCE = 24 * (1 + t * (kScale - 1)); // 弧度半徑隨放大增加
+        drawAngleSector(C_trans, D_trans, E, rDCE, 'rgba(230, 126, 34, 0.35)', '#e67e22', '•'); // 移動的角C ➔ 貼合角B
+        drawAngleSector(D_trans, C_trans, E, rDCE, 'rgba(39, 174, 96, 0.35)', '#27ae60', 'x');  // 移動的角D ➔ 貼合角A
+
+        // 強調移動邊 DC -> AB
+        drawLine(D_trans, C_trans, activeColor, 3.5);
+
+        // 釘子在 E
+        ctx.beginPath(); ctx.arc(E.x, E.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#e74c3c'; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+
+        drawPointLabel('E', E, -22, -2, '#e74c3c', true);
+        drawPointLabel('A', A, -6, -12, '#27ae60', true);
+        drawPointLabel('B', B, -20, 15, '#e67e22', true);
+        drawPointLabel('C', C, 12, 15, '#e67e22', true);
+        drawPointLabel('D', D, 12, -8, '#27ae60', true);
+
+        if (t > 0.05 && t < 0.95) {
+            drawPointLabel("D'", D_trans, -12, -12, '#2980b9');
+            drawPointLabel("C'", C_trans, -15, 15, '#2980b9');
+        }
+
+        if (t === 0) {
+            infoBox.innerHTML = `<strong>第 31 題：已知條件與角度高亮</strong><br>
+            • <span style="color:#e67e22; font-weight:bold;">同弓形內圓周角：</span><b>∠ABE = ∠DCE</b>（橙色 •）<br>
+            • <span style="color:#27ae60; font-weight:bold;">同弓形內圓周角：</span><b>∠BAE = ∠CDE</b>（綠色 x）<br>
+            • 對頂角：<b>∠AEB = ∠DEC</b><br>
+            • 結論：<b>$\\triangle ABE \\sim \\triangle DCE$ (AA 相似)</b>。<br>
+            <i>(b) 計算：$CE = \\frac{DE \\cdot BE}{AE} = \\frac{2 \\times 6}{4} = 3\\text{ cm}$</i>`;
+        } else if (t < 0.5) {
+            infoBox.innerHTML = `<strong>第 31 題：釘實 E 點 ➔ 向左翻轉 (Flip)</strong><br>
+            • 釘實交點 $E$。<b>注意觀察：</b>橙色角（•）與綠色角（x）跟隨三角形一同旋轉對齊！`;
+        } else if (t < 0.99) {
+            infoBox.innerHTML = `<strong>第 31 題：按比例放大 (Scale)</strong><br>
+            • 以 $E$ 為中心放大 $\\triangle DCE$，兩隻對應角跟隨同步放大延伸。`;
+        } else {
+            infoBox.innerHTML = `<strong>第 31 題：完美重疊（證畢）</strong><br>
+            • <b style="color:#27ae60;">橙色角與綠色角各自完美疊合！</b><br>
+            • 證實兩三角形三角對應相等，形狀完全相似。`;
+        }
+    }
+
+
+    // ==========================================
+    // QUESTION 32 (動態對應角跟隨翻轉放大)
+    // ==========================================
+    function drawQ32(t) {
+        const T = { x: 620, y: 310 };
+        const A = { x: 320, y: 310 };
+        const TA_len = 300;
+
+        const R = 110;
+        const O = { x: 320, y: 310 - R };
+
+        const theta_secant = -2.61;
+        const u = { x: Math.cos(theta_secant), y: Math.sin(theta_secant) };
+
+        const w = { x: O.x - T.x, y: O.y - T.y };
+        const s0 = w.x * u.x + w.y * u.y;
+        const d2 = (w.x * w.x + w.y * w.y) - s0 * s0;
+        const h = Math.sqrt(R * R - d2);
+
+        const TC_len = s0 - h;
+        const TB_len = s0 + h;
+
+        const C = { x: T.x + TC_len * u.x, y: T.y + TC_len * u.y };
+        const B = { x: T.x + TB_len * u.x, y: T.y + TB_len * u.y };
+
+        const kScale = TB_len / TA_len;
+
+        ctx.beginPath(); ctx.arc(O.x, O.y, R, 0, Math.PI * 2);
+        ctx.strokeStyle = '#cbd5e1'; ctx.lineWidth = 1.5; ctx.stroke();
+
+        drawLine(T, B, '#94a3b8', 1.5);
+        drawLine(T, {x: A.x - 40, y: 310}, '#94a3b8', 1.5);
+        drawLine(A, B, '#e84393', 2.5);
+        drawLine(A, C, '#2980b9', 2.5);
+
+        // 1. 外側大三角形 △ABT 上的靜態角度標記 (∠ABT)
+        drawAngleSector(B, A, T, 26, 'rgba(232, 67, 147, 0.35)', '#e84393', '•');
+
+        // 目標大三角形 △ABT (虛線輪廓)
+        ctx.beginPath();
+        ctx.moveTo(T.x, T.y); ctx.lineTo(B.x, B.y); ctx.lineTo(A.x, A.y); ctx.closePath();
+        ctx.fillStyle = 'rgba(232, 67, 147, 0.05)'; ctx.fill();
+        ctx.strokeStyle = '#e84393'; ctx.lineWidth = 2; ctx.setLineDash([5, 4]); ctx.stroke(); ctx.setLineDash([]);
+
+        // 2. 計算動態移動點
+        const A_trans = transformPointGeneric(A, T, A, B, kScale, t);
+        const C_trans = transformPointGeneric(C, T, A, B, kScale, t);
+
+        const activeColor = (t >= 0.99) ? '#27ae60' : '#2980b9';
+
+        // 畫移動中的小三角形 △CAT
+        ctx.beginPath();
+        ctx.moveTo(T.x, T.y); ctx.lineTo(A_trans.x, A_trans.y); ctx.lineTo(C_trans.x, C_trans.y); ctx.closePath();
+        ctx.fillStyle = (t >= 0.99) ? 'rgba(46, 204, 113, 0.35)' : 'rgba(41, 128, 185, 0.25)';
+        ctx.strokeStyle = activeColor; ctx.lineWidth = 2.5; ctx.fill(); ctx.stroke();
+
+        // 3. 【關鍵：動態角 CAT 的動態繪製】跟隨 A_trans 和 C_trans 旋轉放大
+        const rCAT = 26 * (1 + t * (kScale - 1));
+        drawAngleSector(A_trans, C_trans, T, rCAT, 'rgba(232, 67, 147, 0.35)', '#e84393', '•'); // 移動的角CAT ➔ 貼合角B
+
+        // 強調邊 AC -> BA
+        drawLine(A_trans, C_trans, activeColor, 3.5);
+
+        // 釘子在 T
+        ctx.beginPath(); ctx.arc(T.x, T.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#e74c3c'; ctx.fill(); ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2; ctx.stroke();
+
+        drawPointLabel('T', T, 12, 5, '#e74c3c', true);
+        drawPointLabel('A', A, -5, 20, '#e84393', true);
+        drawPointLabel('B', B, -18, -8, '#e84393', true);
+        drawPointLabel('C', C, 10, 18, '#64748b');
+
+        if (t > 0.05 && t < 0.95) {
+            drawPointLabel("A'", A_trans, -12, -10, '#2980b9');
+            drawPointLabel("C'", C_trans, -5, 20, '#2980b9');
+        }
+
+        if (t === 0) {
+            infoBox.innerHTML = `<strong>第 32 題：已知條件與角度高亮</strong><br>
+            • <span style="color:#e84393; font-weight:bold;">交錯弓形圓周角：</span><b>∠CAT = ∠ABC</b>（洋紅色 •）<br>
+            • 公共角：<b>∠ATC = ∠BTA</b>（共享頂點 T）<br>
+            • 結論：<b>$\\triangle ABT \\sim \\triangle CAT$ (AA 相似)</b>。`;
+        } else if (t < 0.5) {
+            infoBox.innerHTML = `<strong>第 32 題：釘實右下角 T 點 ➔ 翻轉 (Flip)</strong><br>
+            • 釘實頂點 $T$。<b>注意觀察：</b>$A$ 點處的洋紅色角（•）隨小三角形翻轉轉向 $B$ 點！`;
+        } else if (t < 0.99) {
+            infoBox.innerHTML = `<strong>第 32 題：按比例放大貼合</strong><br>
+            • 以 $T$ 為中心放大，洋紅色角隨之放大並向外伸延。`;
+        } else {
+            infoBox.innerHTML = `<strong>第 32 題：完美重疊（證畢）</strong><br>
+            • <b style="color:#27ae60;">洋紅色角 ∠CAT 完美覆蓋 ∠ABC！</b><br>
+            • 證實兩三角形相似。`;
+        }
+    }
+
+
+    // --- 主繪圖循環 ---
+    function draw() {
+        const t = parseFloat(slider.value);
+        ctx.clearRect(0, 0, 800, 420);
+
+        if (currentTab === 30) {
+            drawQ30(t);
+        } else if (currentTab === 31) {
+            drawQ31(t);
+        } else if (currentTab === 32) {
+            drawQ32(t);
+        }
+
+        percentText.innerText = Math.round(t * 100) + '%';
+    }
+
+    // --- 動畫控制器 ---
+    function animate() {
+        if (!isPlaying) return;
+        let val = parseFloat(slider.value) + 0.006;
+        if (val > 1) {
+            val = 1;
+            isPlaying = false;
+            btnPlay.innerText = '▶ 重播';
+        }
+        slider.value = val;
+        draw();
+        if (isPlaying) {
+            requestAnimationFrame(animate);
+        }
+    }
+
+    slider.addEventListener('input', () => {
+        isPlaying = false;
+        btnPlay.innerText = '▶ 自動播放';
+        draw();
+    });
+
+    btnPlay.addEventListener('click', () => {
+        if (parseFloat(slider.value) >= 1) {
+            slider.value = 0;
+        }
+        isPlaying = !isPlaying;
+        if (isPlaying) {
+            btnPlay.innerText = '⏸ 暫停';
+            animate();
+        } else {
+            btnPlay.innerText = '▶ 自動播放';
+        }
+    });
+
+    // 初始化
+    updateLegend();
+    draw();
+</script>
+</body>
+</html>
